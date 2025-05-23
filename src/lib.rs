@@ -295,14 +295,36 @@ impl Runner for NpxRunner {
     }
 
     fn detect_transport(&self, package: &str) -> Transport {
-        if package.to_lowercase().contains("server")
-            && (package.to_lowercase().contains("mcp")
-                || package.to_lowercase().contains("modelcontextprotocol"))
+        let package_lower = package.to_lowercase();
+        
+        // Check for HTTP transport patterns
+        if (package_lower.contains("http") || package_lower.contains("web") || 
+            package_lower.contains("express") || package_lower.contains("rest") || 
+            package_lower.contains("api")) && 
+           (package_lower.contains("server") || package_lower.contains("service"))
         {
-            Transport::Stdio
-        } else {
-            Transport::Stdio
+            return Transport::Http;
         }
+        
+        // Check for SSE transport patterns
+        if package_lower.contains("sse") || package_lower.contains("event-stream") || 
+           package_lower.contains("event-source") || 
+           (package_lower.contains("stream") && package_lower.contains("event"))
+        {
+            return Transport::SSE;
+        }
+        
+        // MCP-specific patterns
+        if package_lower.contains("server") && 
+           (package_lower.contains("mcp") || package_lower.contains("modelcontextprotocol"))
+        {
+            // For now, we assume most MCP servers use Stdio, but this could be refined
+            // based on specific package implementations
+            return Transport::Stdio;
+        }
+        
+        // Default to Stdio for unknown packages
+        Transport::Stdio
     }
 
     fn requires_tty(&self, transport: &Transport) -> bool {
@@ -339,11 +361,35 @@ mod tests {
     fn test_mcp_transport_detection() {
         let runner = NpxRunner::new("node:20".to_string(), false);
 
+        // MCP server packages - Stdio transport
         assert!(matches!(
             runner.detect_transport("@modelcontextprotocol/server-sequential-thinking"),
             Transport::Stdio
         ));
 
+        // HTTP transport detection
+        assert!(matches!(
+            runner.detect_transport("express-http-server"),
+            Transport::Http
+        ));
+        
+        assert!(matches!(
+            runner.detect_transport("web-api-service"),
+            Transport::Http
+        ));
+        
+        // SSE transport detection
+        assert!(matches!(
+            runner.detect_transport("sse-provider"),
+            Transport::SSE
+        ));
+        
+        assert!(matches!(
+            runner.detect_transport("event-stream-server"),
+            Transport::SSE
+        ));
+
+        // Default case for unknown packages
         assert!(matches!(
             runner.detect_transport("some-other-package"),
             Transport::Stdio
