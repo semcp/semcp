@@ -87,8 +87,7 @@ async fn main() -> Result<()> {
         eprintln!("Using Docker image: {}", docker_image);
     }
 
-    let runner = SnpxRunner::new(docker_image, args.verbose)
-        .with_falco(args.falco);
+    let runner = SnpxRunner::new(docker_image, args.verbose).with_falco(args.falco);
 
     if args.falco && args.verbose {
         eprintln!("Falco security monitoring enabled");
@@ -96,9 +95,8 @@ async fn main() -> Result<()> {
 
     let mut npx_flags = Vec::new();
 
-    if args.yes {
-        npx_flags.push("-y".to_string());
-    } else if !args.no_install {
+    // Always add -y unless no_install is set
+    if !args.no_install {
         npx_flags.push("-y".to_string());
     }
 
