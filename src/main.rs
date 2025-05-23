@@ -49,6 +49,9 @@ struct Args {
     #[arg(long = "shell", help = "Use custom shell")]
     shell: Option<String>,
 
+    #[arg(long = "falco", help = "Enable Falco security monitoring")]
+    falco: bool,
+
     #[arg(help = "The package and arguments to execute")]
     package_args: Vec<String>,
 }
@@ -84,7 +87,12 @@ async fn main() -> Result<()> {
         eprintln!("Using Docker image: {}", docker_image);
     }
 
-    let runner = SnpxRunner::new(docker_image, args.verbose);
+    let runner = SnpxRunner::new(docker_image, args.verbose)
+        .with_falco(args.falco);
+
+    if args.falco && args.verbose {
+        eprintln!("Falco security monitoring enabled");
+    }
 
     let mut npx_flags = Vec::new();
 

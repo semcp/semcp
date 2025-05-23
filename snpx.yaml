@@ -92,3 +92,35 @@ spec:
     log_commands: true
     log_network_access: false
     log_file_access: false 
+
+  falco:
+    enabled: false  # Default is disabled until explicitly enabled
+    rules:
+      - name: "filesystem_access_control"
+        description: "Block unauthorized file system access"
+        enabled: true
+        rules:
+          - name: "write_sensitive_dirs"
+            description: "Block writes to sensitive directories"
+            condition: "open_write and fd.directory in (/etc, /root, /var/run/docker.sock, /proc)"
+            output: "Blocking write to sensitive directory (user=%user.name command=%proc.cmdline directory=%fd.directory)"
+            priority: "WARNING"
+            action: "terminate"
+          - name: "read_sensitive_files"
+            description: "Block reads from sensitive files"
+            condition: "open_read and fd.name in (/etc/shadow, /etc/sudoers, /root/.ssh/id_rsa)"
+            output: "Blocking read from sensitive file (user=%user.name command=%proc.cmdline file=%fd.name)"
+            priority: "WARNING"
+            action: "terminate"
+      - name: "inline_rules"
+        enabled: true
+        rule_content: |
+          - rule: Detect package manager abuse
+            desc: Block attempts to install packages
+            condition: > 
+              spawned_process and 
+              ((proc.name = "apt" and proc.args contains "install") or 
+               (proc.name = "npm" and proc.args contains "install"))
+            output: Blocking package installation (user=%user.name command=%proc.cmdline)
+            priority: WARNING
+            action: terminate
