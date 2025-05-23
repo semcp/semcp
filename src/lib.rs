@@ -10,6 +10,19 @@ pub enum Transport {
     SSE,
 }
 
+pub struct ImageVariants;
+
+impl ImageVariants {
+    pub const ALPINE: &'static str = "node:24-alpine";
+    pub const SLIM: &'static str = "node:24-slim";
+    pub const STANDARD: &'static str = "node:24";
+    pub const DISTROLESS: &'static str = "gcr.io/distroless/nodejs24-debian12";
+
+    pub fn get_recommended() -> &'static str {
+        Self::ALPINE
+    }
+}
+
 /// A trait for a runner, which runs a command in a container.
 pub trait Runner {
     fn command(&self) -> &str;
@@ -54,6 +67,10 @@ impl ContainerExecutor {
             verbose,
             container_name,
         }
+    }
+
+    pub fn new_optimized(verbose: bool) -> Self {
+        Self::new(ImageVariants::get_recommended().to_string(), verbose)
     }
 
     pub fn check_docker_available(&self) -> Result<bool> {
@@ -167,6 +184,10 @@ impl ContainerExecutor {
     pub fn container_name(&self) -> &str {
         &self.container_name
     }
+
+    pub fn image(&self) -> &str {
+        &self.docker_image
+    }
 }
 
 pub struct NpxRunner {
@@ -178,6 +199,24 @@ impl NpxRunner {
         Self {
             executor: ContainerExecutor::new(docker_image, verbose),
         }
+    }
+
+    pub fn new_optimized(verbose: bool) -> Self {
+        Self {
+            executor: ContainerExecutor::new_optimized(verbose),
+        }
+    }
+
+    pub fn new_alpine(verbose: bool) -> Self {
+        Self::new(ImageVariants::ALPINE.to_string(), verbose)
+    }
+
+    pub fn new_slim(verbose: bool) -> Self {
+        Self::new(ImageVariants::SLIM.to_string(), verbose)
+    }
+
+    pub fn new_distroless(verbose: bool) -> Self {
+        Self::new(ImageVariants::DISTROLESS.to_string(), verbose)
     }
 
     pub fn check_docker_available(&self) -> Result<bool> {
@@ -223,6 +262,10 @@ impl NpxRunner {
         self.executor.container_name()
     }
 
+    pub fn image(&self) -> &str {
+        self.executor.image()
+    }
+
     pub fn create_docker_args(&self, npx_args: &[String], transport: &Transport) -> Vec<String> {
         self.create_docker_args_with_flags(&[], npx_args, transport)
     }
@@ -244,7 +287,7 @@ impl Runner for NpxRunner {
     }
 
     fn default_image(&self) -> &str {
-        "node:24"
+        ImageVariants::get_recommended()
     }
 
     fn default_flags(&self) -> Vec<String> {
@@ -267,9 +310,30 @@ impl Runner for NpxRunner {
     }
 }
 
+pub type SnpxRunner = NpxRunner;
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_image_variants() {
+        assert_eq!(ImageVariants::ALPINE, "node:24-alpine");
+        assert_eq!(ImageVariants::SLIM, "node:24-slim");
+        assert_eq!(ImageVariants::STANDARD, "node:24");
+        assert_eq!(ImageVariants::get_recommended(), "node:24-alpine");
+    }
+
+    #[test]
+    fn test_optimized_constructors() {
+        let alpine_runner = NpxRunner::new_alpine(false);
+        let slim_runner = NpxRunner::new_slim(false);
+        let optimized_runner = NpxRunner::new_optimized(false);
+
+        assert_eq!(alpine_runner.image(), "node:24-alpine");
+        assert_eq!(slim_runner.image(), "node:24-slim");
+        assert_eq!(optimized_runner.image(), "node:24-alpine");
+    }
 
     #[test]
     fn test_mcp_transport_detection() {
@@ -332,7 +396,7 @@ mod tests {
         let runner = NpxRunner::new("node:20".to_string(), false);
 
         assert_eq!(runner.command(), "npx");
-        assert_eq!(runner.default_image(), "node:24");
+        assert_eq!(runner.default_image(), "node:24-alpine");
         assert_eq!(runner.default_flags(), vec!["-y".to_string()]);
         assert!(runner.supports_fallback());
 

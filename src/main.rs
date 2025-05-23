@@ -1,6 +1,6 @@
 use anyhow::Result;
 use clap::Parser;
-use snpx::NpxRunner;
+use snpx::{ImageVariants, SnpxRunner};
 use std::env;
 
 #[derive(Parser)]
@@ -13,8 +13,20 @@ struct Args {
     #[arg(long, help = "Use verbose output")]
     verbose: bool,
 
-    #[arg(long = "image", help = "Docker image to use (default: node:24)")]
+    #[arg(long = "image", help = "Docker image to use (default: node:24-alpine)")]
     image: Option<String>,
+
+    #[arg(long = "alpine", help = "Use Alpine image (~180MB)")]
+    alpine: bool,
+
+    #[arg(long = "slim", help = "Use slim image (~250MB)")]
+    slim: bool,
+
+    #[arg(long = "standard", help = "Use standard image (~1.1GB)")]
+    standard: bool,
+
+    #[arg(long = "distroless", help = "Use distroless image (~200MB)")]
+    distroless: bool,
 
     #[arg(short = 'y', help = "Automatically answer yes when prompted")]
     yes: bool,
@@ -41,6 +53,22 @@ struct Args {
     package_args: Vec<String>,
 }
 
+fn determine_image(args: &Args) -> String {
+    if let Some(ref custom_image) = args.image {
+        custom_image.clone()
+    } else if args.alpine {
+        ImageVariants::ALPINE.to_string()
+    } else if args.slim {
+        ImageVariants::SLIM.to_string()
+    } else if args.standard {
+        ImageVariants::STANDARD.to_string()
+    } else if args.distroless {
+        ImageVariants::DISTROLESS.to_string()
+    } else {
+        ImageVariants::get_recommended().to_string()
+    }
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     let args = Args::parse();
@@ -50,9 +78,13 @@ async fn main() -> Result<()> {
         std::process::exit(1);
     }
 
-    let docker_image = args.image.unwrap_or_else(|| "node:24".to_string());
+    let docker_image = determine_image(&args);
 
-    let runner = NpxRunner::new(docker_image, args.verbose);
+    if args.verbose {
+        eprintln!("Using Docker image: {}", docker_image);
+    }
+
+    let runner = SnpxRunner::new(docker_image, args.verbose);
 
     let mut npx_flags = Vec::new();
 
