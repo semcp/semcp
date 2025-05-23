@@ -2,9 +2,17 @@
 
 snpx is a **drop-in replacement for `npx`** that runs npm packages in containerized environments, specifically designed for Model Context Protocol (MCP) servers.
 
-## Why use snpx?
+## Tools Available
 
-`npx` allows you to execute npm packages without installing them globally, but it doesn't provide process isolation. `snpx` enhances this by running packages in isolated Docker containers.
+- **snpx**: A containerized replacement for `npx` (Node.js)
+- **suv**: A containerized replacement for `uv` (Python)
+- **suvx**: A containerized replacement for `uvx` (Python)
+
+## Why use snpx and suv?
+
+- `npx` and `uv` allow you to execute packages without installing them globally, but they don't provide process isolation.
+- `snpx` and `suv` enhance this by running packages in isolated Docker containers.
+- Ideal for running Model Context Protocol (MCP) servers in a containerized environment.
 
 ## Installation
 
@@ -22,7 +30,9 @@ make install
 make install
 ```
 
-## Usage (Drop-in npx replacement)
+## Usage
+
+### Node.js (Drop-in npx replacement)
 
 ```bash
 # Replace npx with snpx - it's that simple!
@@ -36,7 +46,23 @@ npx -y cowsay hello
 snpx -y cowsay hello
 ```
 
+### Python (Drop-in uv replacement)
+
+```bash
+# Replace uv with suv - it's that simple!
+uv run mcp-server-time
+↓
+suv run mcp-server-time
+
+# Replace uvx with suvx
+uvx mcp-server-time
+↓
+suvx mcp-server-time
+```
+
 ## Experiments
+
+### Node.js MCP Servers
 
 `snpx` is tested against the following reference node.js MCP servers:
 
@@ -49,13 +75,18 @@ snpx -y cowsay hello
 - [ ] `@modelcontextprotocol/server-memory`
 - [ ] `@modelcontextprotocol/server-redis`
 
+### Python MCP Servers
+
+`suv` is tested against the following reference Python MCP servers:
+
+- [ ] `mcp-server-time`
 
 ## Troubleshooting
 
 ### Docker not available
 
-`snpx` falls back to regular npx if Docker is not available.
+`snpx` and `suv` fall back to regular `npx` and `uv` respectively if Docker is not available.
 
 ## Security (Future)
 
-`snpx` supports configuration via `snpx.yaml` policy file.
+`snpx` and `suv` support configuration via policy files.

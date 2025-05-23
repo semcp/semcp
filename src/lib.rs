@@ -13,13 +13,23 @@ pub enum Transport {
 pub struct ImageVariants;
 
 impl ImageVariants {
+    // Node.js images
     pub const ALPINE: &'static str = "node:24-alpine";
     pub const SLIM: &'static str = "node:24-slim";
     pub const STANDARD: &'static str = "node:24";
     pub const DISTROLESS: &'static str = "gcr.io/distroless/nodejs24-debian12";
 
+    // Python/uv images
+    pub const PYTHON_ALPINE: &'static str = "python:3.12-alpine";
+    pub const PYTHON_SLIM: &'static str = "python:3.12-slim-bookworm";
+    pub const PYTHON_STANDARD: &'static str = "python:3.12-bookworm";
+    
     pub fn get_recommended() -> &'static str {
         Self::ALPINE
+    }
+    
+    pub fn get_recommended_python() -> &'static str {
+        Self::PYTHON_ALPINE
     }
 }
 
@@ -69,8 +79,21 @@ impl ContainerExecutor {
         }
     }
 
+    pub fn new_with_prefix(docker_image: String, verbose: bool, prefix: &str) -> Self {
+        let timestamp = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let container_name = format!("{}-{}-{}", prefix, std::process::id(), timestamp);
+        Self {
+            docker_image,
+            verbose,
+            container_name,
+        }
+    }
+
     pub fn new_optimized(verbose: bool) -> Self {
-        Self::new(ImageVariants::get_recommended().to_string(), verbose)
+        Self::new_with_prefix(ImageVariants::get_recommended().to_string(), verbose, "snpx")
     }
 
     pub fn check_docker_available(&self) -> Result<bool> {
@@ -197,13 +220,17 @@ pub struct NpxRunner {
 impl NpxRunner {
     pub fn new(docker_image: String, verbose: bool) -> Self {
         Self {
-            executor: ContainerExecutor::new(docker_image, verbose),
+            executor: ContainerExecutor::new_with_prefix(docker_image, verbose, "snpx"),
         }
     }
 
     pub fn new_optimized(verbose: bool) -> Self {
         Self {
-            executor: ContainerExecutor::new_optimized(verbose),
+            executor: ContainerExecutor::new_with_prefix(
+                ImageVariants::get_recommended().to_string(), 
+                verbose,
+                "snpx"
+            ),
         }
     }
 
@@ -312,6 +339,132 @@ impl Runner for NpxRunner {
 
 pub type SnpxRunner = NpxRunner;
 
+pub struct UvRunner {
+    executor: ContainerExecutor,
+}
+
+impl UvRunner {
+    pub fn new(docker_image: String, verbose: bool) -> Self {
+        Self {
+            executor: ContainerExecutor::new_with_prefix(docker_image, verbose, "suv"),
+        }
+    }
+
+    pub fn new_optimized(verbose: bool) -> Self {
+        Self {
+            executor: ContainerExecutor::new_with_prefix(
+                ImageVariants::get_recommended_python().to_string(), 
+                verbose,
+                "suv"
+            ),
+        }
+    }
+
+    pub fn new_alpine(verbose: bool) -> Self {
+        Self::new(ImageVariants::PYTHON_ALPINE.to_string(), verbose)
+    }
+
+    pub fn new_slim(verbose: bool) -> Self {
+        Self::new(ImageVariants::PYTHON_SLIM.to_string(), verbose)
+    }
+
+    pub fn new_standard(verbose: bool) -> Self {
+        Self::new(ImageVariants::PYTHON_STANDARD.to_string(), verbose)
+    }
+
+    pub fn check_docker_available(&self) -> Result<bool> {
+        self.executor.check_docker_available()
+    }
+
+    pub async fn run_containerized_uv(&self, uv_args: &[String]) -> Result<ExitStatus> {
+        self.run_containerized_uv_with_flags(&[], uv_args)
+            .await
+    }
+
+    pub async fn run_containerized_uv_with_flags(
+        &self,
+        uv_flags: &[String],
+        uv_args: &[String],
+    ) -> Result<ExitStatus> {
+        self.executor
+            .run_containerized(self, uv_flags, uv_args)
+            .await
+    }
+
+    pub fn run_fallback_uv(&self, uv_args: &[String]) -> Result<ExitStatus> {
+        self.run_fallback_uv_with_flags(&[], uv_args)
+    }
+
+    pub fn run_fallback_uv_with_flags(
+        &self,
+        uv_flags: &[String],
+        uv_args: &[String],
+    ) -> Result<ExitStatus> {
+        self.executor.run_fallback(self, uv_flags, uv_args)
+    }
+
+    pub async fn cleanup(&self) -> Result<()> {
+        self.executor.cleanup().await
+    }
+
+    pub fn verbose(&self) -> bool {
+        self.executor.verbose()
+    }
+
+    pub fn container_name(&self) -> &str {
+        self.executor.container_name()
+    }
+
+    pub fn image(&self) -> &str {
+        self.executor.image()
+    }
+
+    pub fn create_docker_args(&self, uv_args: &[String], transport: &Transport) -> Vec<String> {
+        self.create_docker_args_with_flags(&[], uv_args, transport)
+    }
+
+    pub fn create_docker_args_with_flags(
+        &self,
+        uv_flags: &[String],
+        uv_args: &[String],
+        transport: &Transport,
+    ) -> Vec<String> {
+        let cmd_args = self.build_command_args(uv_flags, uv_args);
+        self.executor.create_docker_args(self, &cmd_args, transport)
+    }
+}
+
+impl Runner for UvRunner {
+    fn command(&self) -> &str {
+        "uv"
+    }
+
+    fn default_image(&self) -> &str {
+        ImageVariants::get_recommended_python()
+    }
+
+    fn default_flags(&self) -> Vec<String> {
+        vec![]
+    }
+
+    fn detect_transport(&self, package: &str) -> Transport {
+        if package.to_lowercase().contains("server")
+            && (package.to_lowercase().contains("mcp")
+                || package.to_lowercase().contains("modelcontextprotocol"))
+        {
+            Transport::Stdio
+        } else {
+            Transport::Stdio
+        }
+    }
+
+    fn requires_tty(&self, transport: &Transport) -> bool {
+        !matches!(transport, Transport::Stdio)
+    }
+}
+
+pub type SuvRunner = UvRunner;
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -322,6 +475,11 @@ mod tests {
         assert_eq!(ImageVariants::SLIM, "node:24-slim");
         assert_eq!(ImageVariants::STANDARD, "node:24");
         assert_eq!(ImageVariants::get_recommended(), "node:24-alpine");
+        
+        assert_eq!(ImageVariants::PYTHON_ALPINE, "python:3.12-alpine");
+        assert_eq!(ImageVariants::PYTHON_SLIM, "python:3.12-slim-bookworm");
+        assert_eq!(ImageVariants::PYTHON_STANDARD, "python:3.12-bookworm");
+        assert_eq!(ImageVariants::get_recommended_python(), "python:3.12-alpine");
     }
 
     #[test]
@@ -333,6 +491,17 @@ mod tests {
         assert_eq!(alpine_runner.image(), "node:24-alpine");
         assert_eq!(slim_runner.image(), "node:24-slim");
         assert_eq!(optimized_runner.image(), "node:24-alpine");
+        
+        // Test UvRunner constructors
+        let alpine_runner = UvRunner::new_alpine(false);
+        let slim_runner = UvRunner::new_slim(false);
+        let standard_runner = UvRunner::new_standard(false);
+        let optimized_runner = UvRunner::new_optimized(false);
+
+        assert_eq!(alpine_runner.image(), "python:3.12-alpine");
+        assert_eq!(slim_runner.image(), "python:3.12-slim-bookworm");
+        assert_eq!(standard_runner.image(), "python:3.12-bookworm");
+        assert_eq!(optimized_runner.image(), "python:3.12-alpine");
     }
 
     #[test]
@@ -341,6 +510,19 @@ mod tests {
 
         assert!(matches!(
             runner.detect_transport("@modelcontextprotocol/server-sequential-thinking"),
+            Transport::Stdio
+        ));
+
+        assert!(matches!(
+            runner.detect_transport("some-other-package"),
+            Transport::Stdio
+        ));
+        
+        // Test UvRunner transport detection
+        let runner = UvRunner::new("python:3.12".to_string(), false);
+
+        assert!(matches!(
+            runner.detect_transport("mcp-server-time"),
             Transport::Stdio
         ));
 
@@ -378,6 +560,22 @@ mod tests {
         assert!(docker_args_http.contains(&"-t".to_string()));
         assert!(docker_args_http.contains(&"node:20".to_string()));
         assert!(docker_args_http.contains(&"npx".to_string()));
+        
+        // Test UvRunner docker args creation
+        let runner = UvRunner::new("python:3.12".to_string(), false);
+
+        let uv_args = vec!["mcp-server-time".to_string()];
+        let stdio_transport = Transport::Stdio;
+
+        let docker_args = runner.create_docker_args(&uv_args, &stdio_transport);
+
+        assert!(docker_args.contains(&"run".to_string()));
+        assert!(docker_args.contains(&"--rm".to_string()));
+        assert!(docker_args.contains(&"-i".to_string()));
+        assert!(!docker_args.contains(&"-t".to_string()));
+        assert!(docker_args.contains(&"python:3.12".to_string()));
+        assert!(docker_args.contains(&"uv".to_string()));
+        assert!(docker_args.contains(&"mcp-server-time".to_string()));
     }
 
     #[test]
@@ -389,6 +587,15 @@ mod tests {
         assert_ne!(runner1.container_name(), runner2.container_name());
         assert!(runner1.container_name().starts_with("snpx-"));
         assert!(runner2.container_name().starts_with("snpx-"));
+        
+        // Test UvRunner container name generation
+        let runner1 = UvRunner::new("python:3.12".to_string(), false);
+        std::thread::sleep(std::time::Duration::from_nanos(1));
+        let runner2 = UvRunner::new("python:3.12".to_string(), false);
+
+        assert_ne!(runner1.container_name(), runner2.container_name());
+        assert!(runner1.container_name().starts_with("suv-"));
+        assert!(runner2.container_name().starts_with("suv-"));
     }
 
     #[test]
@@ -398,6 +605,20 @@ mod tests {
         assert_eq!(runner.command(), "npx");
         assert_eq!(runner.default_image(), "node:24-alpine");
         assert_eq!(runner.default_flags(), vec!["-y".to_string()]);
+        assert!(runner.supports_fallback());
+
+        let transport = Transport::Stdio;
+        assert!(!runner.requires_tty(&transport));
+
+        let transport = Transport::Http;
+        assert!(runner.requires_tty(&transport));
+        
+        // Test UvRunner trait implementation
+        let runner = UvRunner::new("python:3.12".to_string(), false);
+
+        assert_eq!(runner.command(), "uv");
+        assert_eq!(runner.default_image(), "python:3.12-alpine");
+        assert_eq!(runner.default_flags(), Vec::<String>::new());
         assert!(runner.supports_fallback());
 
         let transport = Transport::Stdio;

@@ -10,10 +10,14 @@ release:
 
 install: release
 	sudo cp target/release/snpx /usr/local/bin/snpx
+	sudo cp target/release/suv /usr/local/bin/suv
+	sudo cp target/release/suvx /usr/local/bin/suvx
 
 install-user: release
 	mkdir -p ~/.local/bin
 	cp target/release/snpx ~/.local/bin/snpx
+	cp target/release/suv ~/.local/bin/suv
+	cp target/release/suvx ~/.local/bin/suvx
 	@echo "Make sure ~/.local/bin is in your PATH"
 
 clean:
