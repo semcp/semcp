@@ -59,3 +59,17 @@ snpx -y cowsay hello
 ## Security (Future)
 
 `snpx` supports configuration via `snpx.yaml` policy file.
+
+### Open Policy Agent (OPA) Integration
+
+`snpx` can use Open Policy Agent (OPA) for runtime policy enforcement:
+
+```bash
+# Enable OPA policy enforcement
+snpx --opa -y @modelcontextprotocol/server-sequential-thinking
+
+# Specify a custom policy file
+snpx --opa --policy-file=my-policy.yaml -y cowsay hello
+```
+
+This integration allows for sophisticated runtime security monitoring and enforcement based on the policies defined in `snpx.yaml`. OPA uses the Rego policy language to enforce rules related to filesystem access, network activity, and container capabilities.

@@ -15,5 +15,12 @@ clap = { version = "4.4", features = ["derive"] }
 tokio = { version = "1.0", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+serde_yaml = "0.9"  # For parsing YAML policies
 anyhow = "1.0"
-which = "5.0" 
+which = "5.0"
+reqwest = { version = "0.11", features = ["json"], optional = true }  # For OPA HTTP API
+tempfile = "3.2"  # For tests
+
+[features]
+default = []
+opa = ["reqwest"]  # OPA integration feature flag 

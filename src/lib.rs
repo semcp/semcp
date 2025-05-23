@@ -3,6 +3,9 @@ use std::process::{Command, ExitStatus};
 use std::time::{SystemTime, UNIX_EPOCH};
 use tokio::process::Command as AsyncCommand;
 
+// OPA integration
+pub mod opa;
+
 #[derive(Debug, Clone)]
 pub enum Transport {
     Stdio,
@@ -53,6 +56,9 @@ pub struct ContainerExecutor {
     docker_image: String,
     verbose: bool,
     container_name: String,
+    opa_enabled: bool,
+    #[cfg(feature = "opa")]
+    opa_manager: Option<opa::OpaManager>,
 }
 
 impl ContainerExecutor {
@@ -66,11 +72,25 @@ impl ContainerExecutor {
             docker_image,
             verbose,
             container_name,
+            opa_enabled: false,
+            #[cfg(feature = "opa")]
+            opa_manager: None,
         }
     }
 
     pub fn new_optimized(verbose: bool) -> Self {
         Self::new(ImageVariants::get_recommended().to_string(), verbose)
+    }
+
+    pub fn with_opa(mut self, enable_opa: bool) -> Self {
+        self.opa_enabled = enable_opa;
+        #[cfg(feature = "opa")]
+        {
+            if enable_opa {
+                self.opa_manager = Some(opa::OpaManager::new(true));
+            }
+        }
+        self
     }
 
     pub fn check_docker_available(&self) -> Result<bool> {
@@ -128,6 +148,25 @@ impl ContainerExecutor {
             eprintln!("Running: {}", docker_cmd);
         }
 
+        // Start OPA sidecar if enabled
+        #[cfg(feature = "opa")]
+        if self.opa_enabled && self.opa_manager.is_some() {
+            if let Some(manager) = &self.opa_manager {
+                if manager.check_opa_available().unwrap_or(false) {
+                    let opa_args = manager.create_opa_sidecar_args(&self.container_name);
+                    if !opa_args.is_empty() && self.verbose {
+                        eprintln!("Starting OPA sidecar: docker {}", opa_args.join(" "));
+                        let _ = Command::new("docker")
+                            .args(opa_args)
+                            .status()
+                            .context("Failed to start OPA sidecar container");
+                    }
+                } else if self.verbose {
+                    eprintln!("OPA is enabled but not available; proceeding without policy enforcement");
+                }
+            }
+        }
+
         let mut child = AsyncCommand::new("docker")
             .args(docker_args)
             .spawn()
@@ -174,6 +213,17 @@ impl ContainerExecutor {
             .args(["stop", &self.container_name])
             .output()
             .await;
+
+        // Clean up OPA sidecar if enabled
+        #[cfg(feature = "opa")]
+        if self.opa_enabled {
+            let opa_container_name = format!("{}-opa", self.container_name);
+            let _ = AsyncCommand::new("docker")
+                .args(["stop", &opa_container_name])
+                .output()
+                .await;
+        }
+
         Ok(())
     }
 
@@ -217,6 +267,11 @@ impl NpxRunner {
 
     pub fn new_distroless(verbose: bool) -> Self {
         Self::new(ImageVariants::DISTROLESS.to_string(), verbose)
+    }
+
+    pub fn with_opa(mut self, enable_opa: bool) -> Self {
+        self.executor = self.executor.with_opa(enable_opa);
+        self
     }
 
     pub fn check_docker_available(&self) -> Result<bool> {

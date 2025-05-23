@@ -49,6 +49,12 @@ struct Args {
     #[arg(long = "shell", help = "Use custom shell")]
     shell: Option<String>,
 
+    #[arg(long = "opa", help = "Enable OPA policy enforcement")]
+    opa: bool,
+
+    #[arg(long = "policy-file", help = "Path to policy file (default: ./snpx.yaml)")]
+    policy_file: Option<String>,
+
     #[arg(help = "The package and arguments to execute")]
     package_args: Vec<String>,
 }
@@ -84,7 +90,11 @@ async fn main() -> Result<()> {
         eprintln!("Using Docker image: {}", docker_image);
     }
 
-    let runner = SnpxRunner::new(docker_image, args.verbose);
+    let runner = SnpxRunner::new(docker_image, args.verbose).with_opa(args.opa);
+
+    if args.opa && args.verbose {
+        eprintln!("OPA integration enabled");
+    }
 
     let mut npx_flags = Vec::new();
 
