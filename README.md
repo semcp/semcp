@@ -56,6 +56,32 @@ snpx -y cowsay hello
 
 `snpx` falls back to regular npx if Docker is not available.
 
-## Security (Future)
+## Security and Configuration
 
-`snpx` supports configuration via `snpx.yaml` policy file.
+`snpx` supports configuration via `snpx.yaml` policy file. This file allows you to:
+
+1. Define security policies for containerized execution
+2. Configure package-specific transport protocols
+
+### Transport Protocol Configuration
+
+`snpx` automatically detects which transport protocol (HTTP, SSE, or stdio) is used by each package:
+
+```yaml
+# Package transport configuration in snpx.yaml
+package_transports:
+  # MCP servers with HTTP transport
+  "@modelcontextprotocol/server-http": "http"
+  "@modelcontextprotocol/server-web": "http"
+  
+  # MCP servers with SSE transport
+  "@modelcontextprotocol/server-events": "sse"
+  
+  # Override automatic detection for custom packages
+  "some-custom-package": "stdio"
+```
+
+If no configuration is provided, `snpx` uses name-based heuristics to detect the transport protocol:
+- HTTP: Packages containing terms like "http", "web", "express", etc.
+- SSE: Packages containing terms like "sse", "event-stream", "event-source", etc.
+- Stdio: Default for most packages, including MCP servers

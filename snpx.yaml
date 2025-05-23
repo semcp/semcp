@@ -5,6 +5,20 @@ metadata:
   name: snpx-security-policy
   description: Security configuration for snpx containerized npm execution
 
+# Package transport configuration
+# Explicitly define which transport protocol specific packages use
+package_transports:
+  # MCP servers with HTTP transport
+  "@modelcontextprotocol/server-http": "http"
+  "@modelcontextprotocol/server-web": "http"
+  
+  # MCP servers with SSE transport
+  "@modelcontextprotocol/server-events": "sse"
+  "@modelcontextprotocol/server-streaming": "sse"
+  
+  # Override automatic detection for specific packages if needed
+  "some-custom-package": "stdio"
+
 spec:
   docker:
     capabilities:
@@ -91,4 +105,4 @@ spec:
     log_level: "info"
     log_commands: true
     log_network_access: false
-    log_file_access: false 
+    log_file_access: false  

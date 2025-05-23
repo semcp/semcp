@@ -2,12 +2,64 @@ use anyhow::{Context, Result};
 use std::process::{Command, ExitStatus};
 use std::time::{SystemTime, UNIX_EPOCH};
 use tokio::process::Command as AsyncCommand;
+use std::collections::HashMap;
+use std::fs;
+use std::path::Path;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Transport {
+    /// Standard input/output based communication
     Stdio,
+    /// HTTP-based server communication
     Http,
+    /// Server-Sent Events based communication
     SSE,
+}
+
+// Configuration structs for snpx.yaml
+/// Configuration for package-specific transport types
+#[derive(Debug, Deserialize, Serialize, Default)]
+pub struct PackageTransportConfig {
+    /// Map of package names to their transport types ("stdio", "http", "sse")
+    pub package_transports: HashMap<String, String>,
+}
+
+impl PackageTransportConfig {
+    /// Load configuration from a YAML file
+    /// 
+    /// Example file format:
+    /// ```yaml
+    /// package_transports:
+    ///   "@modelcontextprotocol/server-http": "http"
+    ///   "@modelcontextprotocol/server-sse": "sse"
+    ///   "custom-package": "http"
+    /// ```
+    pub fn from_file(path: &str) -> Result<Self> {
+        if !Path::new(path).exists() {
+            return Ok(Self::default());
+        }
+        
+        let config_str = fs::read_to_string(path)
+            .context(format!("Failed to read config file: {}", path))?;
+            
+        let config: PackageTransportConfig = serde_yaml::from_str(&config_str)
+            .context("Failed to parse YAML config")?;
+            
+        Ok(config)
+    }
+    
+    /// Get the transport type for a specific package if configured
+    pub fn get_transport_for_package(&self, package: &str) -> Option<Transport> {
+        self.package_transports.get(package).and_then(|transport_str| {
+            match transport_str.to_lowercase().as_str() {
+                "http" => Some(Transport::Http),
+                "sse" => Some(Transport::SSE),
+                "stdio" => Some(Transport::Stdio),
+                _ => None,
+            }
+        })
+    }
 }
 
 pub struct ImageVariants;
@@ -192,18 +244,33 @@ impl ContainerExecutor {
 
 pub struct NpxRunner {
     executor: ContainerExecutor,
+    config: PackageTransportConfig,
 }
 
 impl NpxRunner {
     pub fn new(docker_image: String, verbose: bool) -> Self {
+        // Try to load config from current directory
+        let config = PackageTransportConfig::from_file("./snpx.yaml").unwrap_or_default();
+        
         Self {
             executor: ContainerExecutor::new(docker_image, verbose),
+            config,
         }
+    }
+
+    pub fn new_with_config(docker_image: String, verbose: bool, config_path: &str) -> Result<Self> {
+        let config = PackageTransportConfig::from_file(config_path)?;
+        
+        Ok(Self {
+            executor: ContainerExecutor::new(docker_image, verbose),
+            config,
+        })
     }
 
     pub fn new_optimized(verbose: bool) -> Self {
         Self {
             executor: ContainerExecutor::new_optimized(verbose),
+            config: PackageTransportConfig::default(),
         }
     }
 
@@ -294,7 +361,18 @@ impl Runner for NpxRunner {
         vec!["-y".to_string()]
     }
 
+    /// Detect the transport protocol used by the package
+    /// 
+    /// This uses a multi-layered approach to detect the transport:
+    /// 1. First checks for user-provided transport hints in snpx.yaml
+    /// 2. Then uses name-based heuristics to detect common transport patterns
+    /// 3. Falls back to Stdio as the default transport
     fn detect_transport(&self, package: &str) -> Transport {
+        // Check if there's a user-provided transport hint in the config
+        if let Some(transport) = self.config.get_transport_for_package(package) {
+            return transport;
+        }
+        
         let package_lower = package.to_lowercase();
         
         // Check for HTTP transport patterns
@@ -355,6 +433,42 @@ mod tests {
         assert_eq!(alpine_runner.image(), "node:24-alpine");
         assert_eq!(slim_runner.image(), "node:24-slim");
         assert_eq!(optimized_runner.image(), "node:24-alpine");
+    }
+
+    #[test]
+    fn test_config_based_transport_detection() {
+        // Create a test config
+        let mut config = PackageTransportConfig::default();
+        config.package_transports.insert(
+            "custom-package".to_string(),
+            "http".to_string(),
+        );
+        config.package_transports.insert(
+            "another-package".to_string(),
+            "sse".to_string(),
+        );
+        
+        let runner = NpxRunner {
+            executor: ContainerExecutor::new("node:20".to_string(), false),
+            config,
+        };
+        
+        // Test config-based detection
+        assert!(matches!(
+            runner.detect_transport("custom-package"),
+            Transport::Http
+        ));
+        
+        assert!(matches!(
+            runner.detect_transport("another-package"),
+            Transport::SSE
+        ));
+        
+        // Test fallback to heuristics for non-configured packages
+        assert!(matches!(
+            runner.detect_transport("http-server"),
+            Transport::Http
+        ));
     }
 
     #[test]
