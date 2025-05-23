@@ -60,6 +60,8 @@ uvx mcp-server-time
 suvx mcp-server-time
 ```
 
+Both `suv` and `suvx` run Python/uv commands in a containerized Docker environment with Python and uv pre-installed. This provides improved isolation and reproducibility for Python-based MCP servers, just as `snpx` does for Node.js.
+
 ## Experiments
 
 ### Node.js MCP Servers
