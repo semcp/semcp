@@ -60,7 +60,7 @@ impl PolicyConfig {
                 if let Some(ref allow_list) = storage.allow {
                     for storage_permission in allow_list {
                         if storage_permission.uri.starts_with("fs://") {
-                            let path = &storage_permission.uri[4..];
+                            let path = &storage_permission.uri[5..];
                             let readonly = !storage_permission.access.contains(&AccessType::Write);
                             let mode = if readonly { "ro" } else { "rw" };
 
@@ -109,5 +109,55 @@ mod tests {
         let config = PolicyConfig::new();
         let args = config.get_all_docker_args();
         assert!(args.is_empty());
+    }
+
+    #[test]
+    fn test_map_docker_security_args() {
+        let config = PolicyConfig::from_file("testdata/policy.yaml").unwrap();
+        let args = config.map_docker_security_args();
+
+        assert!(args.contains(&"--security-opt".to_string()));
+        assert!(args.contains(&"no-new-privileges".to_string()));
+        assert!(args.contains(&"--cap-drop".to_string()));
+        assert!(args.iter().any(|arg| arg.contains("All")));
+    }
+
+    #[test]
+    fn test_map_file_mounts() {
+        let config = PolicyConfig::from_file("testdata/policy.yaml").unwrap();
+        let mounts = config.map_file_mounts();
+
+        assert!(mounts.contains(&"-v".to_string()));
+
+        let mount_arg = mounts
+            .iter()
+            .find(|arg| arg.contains("/tmp/mcp-filesystem"))
+            .expect("Should contain mount path");
+        assert!(mount_arg.contains(":ro"), "Should be read-only mount");
+        assert!(mount_arg.contains("/tmp/mcp-filesystem:/tmp/mcp-filesystem:ro"));
+    }
+
+    #[test]
+    fn test_empty_policy_individual_methods() {
+        let config = PolicyConfig::new();
+
+        let security_args = config.map_docker_security_args();
+        assert!(security_args.is_empty());
+
+        let mounts = config.map_file_mounts();
+        assert!(mounts.is_empty());
+    }
+
+    #[test]
+    fn test_privileged_false_generates_security_opt() {
+        let config = PolicyConfig::from_file("testdata/policy.yaml").unwrap();
+        let args = config.map_docker_security_args();
+
+        let security_opt_pos = args.iter().position(|arg| arg == "--security-opt");
+        assert!(security_opt_pos.is_some());
+
+        if let Some(pos) = security_opt_pos {
+            assert_eq!(args.get(pos + 1), Some(&"no-new-privileges".to_string()));
+        }
     }
 }
