@@ -1,8 +1,7 @@
 $(shell [ -d .makes ] || \
   (git clone -q https://github.com/makeplus/makes .makes))
 include .makes/init.mk
-include .makes/env.mk
-include .makes/rust.mk
+include $(MAKES)/rust.mk
 
 define HELP
 Available targets:
