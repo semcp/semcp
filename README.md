@@ -40,6 +40,11 @@ snpx -y @modelcontextprotocol/server-sequential-thinking
 npx -y cowsay hello
 ↓  
 snpx -y cowsay hello
+
+# policy file for enviornment variables, file mounting, networking, or docker security flags, use a policy file
+npx -y @modelcontextprotocol/server-filesystem path/to/use
+↓
+snpx --policy samples/filesystem/policy.yaml -y @modelcontextprotocol/server-filesystem path/to/use
 ```
 
 ## Experiments
