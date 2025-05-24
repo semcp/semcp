@@ -1,0 +1,18 @@
+version: '1.0'
+description: Permission policy for mcp-github
+permissions:
+  environment:
+    allow:
+    - key: GITHUB_PERSONAL_ACCESS_TOKEN
+
+  network:
+    allow:
+    - host: api.github.com
+
+  runtime:
+    docker:
+      security:
+        privileged: false
+        no_new_privileges: true
+        capabilities:
+          drop: [ALL]

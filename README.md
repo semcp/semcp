@@ -6,6 +6,12 @@ snpx is a **drop-in replacement for `npx`** that runs npm packages in containeri
 
 `npx` allows you to execute npm packages without installing them globally, but it doesn't provide process isolation. `snpx` enhances this by running packages in isolated Docker containers.
 
+## Limitations
+
+As the name implies, `snpx` can only work with MCP servers that are available on npm.
+
+Also, it only works with stdio-based MCP servers. SSE / Streamable HTTP transports will be supported in the future.
+
 ## Installation
 
 ### Build from source
@@ -34,6 +40,11 @@ snpx -y @modelcontextprotocol/server-sequential-thinking
 npx -y cowsay hello
 ↓  
 snpx -y cowsay hello
+
+# policy file for enviornment variables, file mounting, networking, or docker security flags, use a policy file
+npx -y @modelcontextprotocol/server-filesystem path/to/use
+↓
+snpx --policy samples/filesystem/policy.yaml -y @modelcontextprotocol/server-filesystem path/to/use
 ```
 
 ## Experiments
@@ -43,8 +54,7 @@ snpx -y cowsay hello
 - [x] `@modelcontextprotocol/server-sequential-thinking`
 - [x] `@modelcontextprotocol/server-everything`
 - [x] `@modelcontextprotocol/server-filesystem` (requires fs mounting)
-- [ ] `@modelcontextprotocol/server-github` (requires networking and secrets)
-- [ ] `@modelcontextprotocol/server-gdrive`
+- [x] `@modelcontextprotocol/server-github` (requires networking and secrets)
 - [ ] `@modelcontextprotocol/server-google-maps`
 - [ ] `@modelcontextprotocol/server-memory`
 - [ ] `@modelcontextprotocol/server-redis`
@@ -56,6 +66,6 @@ snpx -y cowsay hello
 
 `snpx` falls back to regular npx if Docker is not available.
 
-## Security (Future)
+## Capability Policy
 
-`snpx` supports configuration via `snpx.yaml` policy file.
+`snpx` supports configuration via capability policy files defined in YAML format. You can find examples in the `samples` directory.
