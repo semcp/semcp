@@ -1,6 +1,6 @@
 use anyhow::Result;
 use clap::Parser;
-use snpx::{ImageVariants, SnpxRunner};
+use snpx::{ImageVariants, PolicyConfig, SnpxRunner};
 use std::env;
 
 #[derive(Parser)]
@@ -49,6 +49,9 @@ struct Args {
     #[arg(long = "shell", help = "Use custom shell")]
     shell: Option<String>,
 
+    #[arg(long = "policy", help = "Path to policy file")]
+    policy: Option<String>,
+
     #[arg(help = "The package and arguments to execute")]
     package_args: Vec<String>,
 }
@@ -84,7 +87,16 @@ async fn main() -> Result<()> {
         eprintln!("Using Docker image: {}", docker_image);
     }
 
-    let runner = SnpxRunner::new(docker_image, args.verbose);
+    let policy_config = if let Some(ref policy_path) = args.policy {
+        if args.verbose {
+            eprintln!("Loading policy from: {}", policy_path);
+        }
+        PolicyConfig::from_file(policy_path)?
+    } else {
+        PolicyConfig::new()
+    };
+
+    let runner = SnpxRunner::with_policy(docker_image, args.verbose, policy_config);
 
     let mut npx_flags = Vec::new();
 

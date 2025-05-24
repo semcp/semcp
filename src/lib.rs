@@ -3,6 +3,9 @@ use std::process::{Command, ExitStatus};
 use std::time::{SystemTime, UNIX_EPOCH};
 use tokio::process::Command as AsyncCommand;
 
+pub mod policy;
+pub use policy::PolicyConfig;
+
 #[derive(Debug, Clone)]
 pub enum Transport {
     Stdio,
@@ -53,10 +56,15 @@ pub struct ContainerExecutor {
     docker_image: String,
     verbose: bool,
     container_name: String,
+    policy_config: PolicyConfig,
 }
 
 impl ContainerExecutor {
     pub fn new(docker_image: String, verbose: bool) -> Self {
+        Self::with_policy(docker_image, verbose, PolicyConfig::new())
+    }
+
+    pub fn with_policy(docker_image: String, verbose: bool, policy_config: PolicyConfig) -> Self {
         let timestamp = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
@@ -66,6 +74,7 @@ impl ContainerExecutor {
             docker_image,
             verbose,
             container_name,
+            policy_config,
         }
     }
 
@@ -104,6 +113,7 @@ impl ContainerExecutor {
             docker_args.push("-t".to_string());
         }
 
+        docker_args.extend(self.policy_config.get_all_docker_args());
         docker_args.extend(runner.additional_docker_args());
         docker_args.push(self.docker_image.clone());
         docker_args.extend(cmd_args.iter().cloned());
@@ -201,22 +211,10 @@ impl NpxRunner {
         }
     }
 
-    pub fn new_optimized(verbose: bool) -> Self {
+    pub fn with_policy(docker_image: String, verbose: bool, policy_config: PolicyConfig) -> Self {
         Self {
-            executor: ContainerExecutor::new_optimized(verbose),
+            executor: ContainerExecutor::with_policy(docker_image, verbose, policy_config),
         }
-    }
-
-    pub fn new_alpine(verbose: bool) -> Self {
-        Self::new(ImageVariants::ALPINE.to_string(), verbose)
-    }
-
-    pub fn new_slim(verbose: bool) -> Self {
-        Self::new(ImageVariants::SLIM.to_string(), verbose)
-    }
-
-    pub fn new_distroless(verbose: bool) -> Self {
-        Self::new(ImageVariants::DISTROLESS.to_string(), verbose)
     }
 
     pub fn check_docker_available(&self) -> Result<bool> {
@@ -322,17 +320,6 @@ mod tests {
         assert_eq!(ImageVariants::SLIM, "node:24-slim");
         assert_eq!(ImageVariants::STANDARD, "node:24");
         assert_eq!(ImageVariants::get_recommended(), "node:24-alpine");
-    }
-
-    #[test]
-    fn test_optimized_constructors() {
-        let alpine_runner = NpxRunner::new_alpine(false);
-        let slim_runner = NpxRunner::new_slim(false);
-        let optimized_runner = NpxRunner::new_optimized(false);
-
-        assert_eq!(alpine_runner.image(), "node:24-alpine");
-        assert_eq!(slim_runner.image(), "node:24-slim");
-        assert_eq!(optimized_runner.image(), "node:24-alpine");
     }
 
     #[test]

@@ -1,0 +1,15 @@
+version: "1.0"
+description: "Permission policy for mcp-filesystem"
+permissions:
+  storage:
+    allow:
+    - uri: "fs://tmp/mcp-filesystem"
+      access: ["read", "write"]
+
+  runtime:
+    docker:
+      security:
+        privileged: false
+        no_new_privileges: true
+        capabilities:
+          drop: ["ALL"]

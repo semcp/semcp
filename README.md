@@ -42,8 +42,8 @@ snpx -y cowsay hello
 
 - [x] `@modelcontextprotocol/server-sequential-thinking`
 - [x] `@modelcontextprotocol/server-everything`
-- [ ] `@modelcontextprotocol/server-filesystem`
-- [ ] `@modelcontextprotocol/server-github`
+- [x] `@modelcontextprotocol/server-filesystem` (requires fs mounting)
+- [ ] `@modelcontextprotocol/server-github` (requires networking and secrets)
 - [ ] `@modelcontextprotocol/server-gdrive`
 - [ ] `@modelcontextprotocol/server-google-maps`
 - [ ] `@modelcontextprotocol/server-memory`
