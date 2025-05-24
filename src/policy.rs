@@ -60,7 +60,7 @@ impl PolicyConfig {
                 if let Some(ref allow_list) = storage.allow {
                     for storage_permission in allow_list {
                         if storage_permission.uri.starts_with("fs://") {
-                            let path = &storage_permission.uri[4..];
+                            let path = &storage_permission.uri[5..];
                             let readonly = !storage_permission.access.contains(&AccessType::Write);
                             let mode = if readonly { "ro" } else { "rw" };
 

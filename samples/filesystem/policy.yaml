@@ -3,8 +3,8 @@ description: "Permission policy for mcp-filesystem"
 permissions:
   storage:
     allow:
-    - uri: "fs://tmp/mcp-filesystem"
-      access: ["read", "write"]
+    - uri: "fs:///tmp/mcp-filesystem"
+      access: ["read"]
 
   runtime:
     docker:
