@@ -1,5 +1,3 @@
-.PHONY: build release install clean test fmt check
-
 all: build
 
 build:
