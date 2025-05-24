@@ -45,7 +45,7 @@ $(RELEASE-FILE): $(CARGO)
 	touch $@
 
 install: $(RELEASE-FILE)
-	mkdir -p $(BIN)
+	$(if $(wildcard $(BIN)),,mkdir -p $(BIN))
 	cp $< $(BIN)/
 	@[[ :$$PATH: == *:$$BIN:* ]] || \
 	  echo "Make sure '$$BIN' is in your PATH"
