@@ -64,7 +64,7 @@ snpx --policy samples/filesystem/policy.yaml -y @modelcontextprotocol/server-fil
 
 ### Docker not available
 
-`snpx` falls back to regular npx if Docker is not available.
+`snpx` requires Docker to be installed and running. If Docker is not available, `snpx` will exit with an error.
 
 ## Capability Policy
 

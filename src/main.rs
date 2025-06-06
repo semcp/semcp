@@ -141,7 +141,9 @@ async fn main() -> Result<()> {
             .run_containerized_npx_with_flags(&npx_flags, &args.package_args)
             .await
     } else {
-        runner.run_fallback_npx_with_flags(&npx_flags, &args.package_args)
+        eprintln!("Docker is not available or not running");
+        eprintln!("snpx requires Docker to be installed and running");
+        std::process::exit(1);
     };
 
     match result {

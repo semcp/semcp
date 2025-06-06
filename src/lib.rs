@@ -37,7 +37,7 @@ pub trait Runner {
         vec![]
     }
     fn supports_fallback(&self) -> bool {
-        true
+        false
     }
     /// flags are runner specific flags and arguments are the command arguments.
     /// e.g. for npx, flags are the npx flags and arguments are the command arguments.
@@ -157,28 +157,6 @@ impl ContainerExecutor {
         }
     }
 
-    pub fn run_fallback<R: Runner>(
-        &self,
-        runner: &R,
-        flags: &[String],
-        args: &[String],
-    ) -> Result<ExitStatus> {
-        if !runner.supports_fallback() {
-            return Err(anyhow::anyhow!("Fallback not supported for this runner"));
-        }
-
-        if self.verbose {
-            eprintln!("Falling back to regular {}", runner.command());
-        }
-
-        let mut cmd = Command::new(runner.command());
-        cmd.args(flags);
-        cmd.args(args);
-
-        let status = cmd.status().context("Failed to execute command")?;
-        Ok(status)
-    }
-
     pub async fn cleanup(&self) -> Result<()> {
         let _output = AsyncCommand::new("docker")
             .args(["stop", &self.container_name])
@@ -234,18 +212,6 @@ impl NpxRunner {
         self.executor
             .run_containerized(self, npx_flags, npx_args)
             .await
-    }
-
-    pub fn run_fallback_npx(&self, npx_args: &[String]) -> Result<ExitStatus> {
-        self.run_fallback_npx_with_flags(&["-y".to_string()], npx_args)
-    }
-
-    pub fn run_fallback_npx_with_flags(
-        &self,
-        npx_flags: &[String],
-        npx_args: &[String],
-    ) -> Result<ExitStatus> {
-        self.executor.run_fallback(self, npx_flags, npx_args)
     }
 
     pub async fn cleanup(&self) -> Result<()> {
