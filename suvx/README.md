@@ -14,5 +14,5 @@ suvx pycowsay hello
 `suvx` is tested against the following reference Python MCP servers:
 
 - [x] `mcp-server-fetch`
-- [ ] `mcp-server-time`
+- [x] `mcp-server-time`
 - [ ] `mcp-server-git`
