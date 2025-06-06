@@ -10,7 +10,7 @@ name = "snpx"
 path = "src/main.rs"
 
 [dependencies]
-common = { path = "../common" }
+semcp-common = { path = "../common" }
 clap = { workspace = true }
 tokio = { workspace = true }
 anyhow = { workspace = true } 

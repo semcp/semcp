@@ -1,0 +1,22 @@
+[workspace]
+git_release_enable = true
+git_tag_enable = true
+publish = false
+
+[[package]]
+name = "snpx"
+git_release_enable = true
+git_tag_enable = true
+publish = false
+
+[[package]]
+name = "suvx"
+git_release_enable = true
+git_tag_enable = true
+publish = false
+
+[[package]]
+name = "semcp-common"
+git_release_enable = false
+git_tag_enable = false
+publish = false 
