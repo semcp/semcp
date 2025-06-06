@@ -159,20 +159,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5b63caa9aa9397e2d9480a9b13673856c78d8ac123288526c37d7839f2a86990"
 
 [[package]]
-name = "common"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "clap",
- "policy-mcp",
- "serde",
- "serde_json",
- "serde_yaml",
- "tokio",
- "which",
-]
-
-[[package]]
 name = "either"
 version = "1.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -410,6 +396,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "94143f37725109f92c262ed2cf5e59bce7498c01bcc1502d7b9afe439a4e9f49"
 
 [[package]]
+name = "semcp-common"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "policy-mcp",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "tokio",
+ "which",
+]
+
+[[package]]
 name = "serde"
 version = "1.0.219"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -475,7 +475,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "clap",
- "common",
+ "semcp-common",
  "tokio",
 ]
 
@@ -501,7 +501,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "clap",
- "common",
+ "semcp-common",
  "tokio",
 ]
 

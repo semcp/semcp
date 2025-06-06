@@ -1,6 +1,6 @@
 use anyhow::Result;
 use clap::Parser;
-use common::{ContainerExecutor, ImageVariants, PolicyConfig, Runner, Transport};
+use semcp_common::{ContainerExecutor, ImageVariants, PolicyConfig, Runner, Transport};
 use std::env;
 
 #[derive(Parser)]
