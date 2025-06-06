@@ -1,11 +1,16 @@
-SHELL := bash
+$(shell [ -d .makes ] || \
+  (git clone -q https://github.com/makeplus/makes .makes))
+include .makes/init.mk
+include $(MAKES)/rust.mk
 
 define HELP
 Available targets:
   build        - Build in debug mode
   release      - Build in release mode
-  install      - Install to ~/.local/bin
-                   or to /usr/local/bin (with sudo)
+  install      - Install to $$PREFIX/bin/
+                 PREFIX defaults:
+		 - ~/.local/bin
+                 - /usr/local/bin (when root)
   clean        - Clean build artifacts
   test         - Run tests
   fmt          - Format code
@@ -13,36 +18,33 @@ Available targets:
   lint|clippy  - Run clippy linter
   help         - Show this help message
 endef
-export HELP
 
 RELEASE-FILE := target/release/snpx
 
+PREFIX ?= $(if $(IS-ROOT),/usr/local/bin,$(HOME)/.local)
+export BIN := $(PREFIX)/bin
 
-default: build
 
-build:
-	cargo build
+default:: help
+
+help: _makes-help
+
+$(CARGO-CMDS):: $(CARGO)
+	cargo $@
+
+lint: clippy
+
+clean::
+	$(RM) -r target
 
 release: $(RELEASE-FILE)
 
-$(RELEASE-FILE):
+$(RELEASE-FILE): $(CARGO)
 	cargo build --release
+	touch $@
 
 install: $(RELEASE-FILE)
-ifeq (0,$(shell id -u))
-	sudo cp $< /usr/local/bin/snpx
-else
-	mkdir -p ~/.local/bin
-	cp $< ~/.local/bin/snpx
-	@[[ :$$PATH: == *:$$HOME/.local/bin:* ]] || \
-	  echo 'Make sure ~/.local/bin is in your PATH'
-endif
-
-clean test fmt check clippy:
-	cargo $@
-
-lint:
-	cargo clippy
-
-help:
-	@echo "$$HELP"
+	$(if $(wildcard $(BIN)),,mkdir -p $(BIN))
+	cp $< $(BIN)/
+	@[[ :$$PATH: == *:$$BIN:* ]] || \
+	  echo "Make sure '$$BIN' is in your PATH"
