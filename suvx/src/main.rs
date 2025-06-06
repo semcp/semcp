@@ -13,7 +13,10 @@ struct Args {
     #[arg(long, help = "Use verbose output")]
     verbose: bool,
 
-    #[arg(long = "image", help = "Docker image to use (default: python:3.12-alpine)")]
+    #[arg(
+        long = "image",
+        help = "Docker image to use (default: python:3.12-alpine)"
+    )]
     image: Option<String>,
 
     #[arg(long = "alpine", help = "Use Alpine image (~200MB)")]
@@ -31,10 +34,16 @@ struct Args {
     #[arg(long = "from", help = "Install the command from a different package")]
     from_package: Option<String>,
 
-    #[arg(long = "with", help = "Install additional packages alongside the main package")]
+    #[arg(
+        long = "with",
+        help = "Install additional packages alongside the main package"
+    )]
     with_packages: Vec<String>,
 
-    #[arg(long = "with-editable", help = "Install additional packages in editable mode")]
+    #[arg(
+        long = "with-editable",
+        help = "Install additional packages in editable mode"
+    )]
     with_editable: Vec<String>,
 
     #[arg(long = "index", help = "Base URL of Python package index")]
@@ -91,7 +100,9 @@ impl SuvxRunner {
         uvx_flags: &[String],
         uvx_args: &[String],
     ) -> Result<std::process::ExitStatus> {
-        self.executor.run_containerized(self, uvx_flags, uvx_args).await
+        self.executor
+            .run_containerized(self, uvx_flags, uvx_args)
+            .await
     }
 }
 
@@ -226,19 +237,15 @@ async fn main() -> Result<()> {
 
     let uvx_flags = build_uvx_flags(&args);
 
-    let result = if runner.check_docker_available()? {
-        if args.verbose {
-            eprintln!("Docker is available, using containerized execution");
-        }
-        runner
-            .run_containerized_uvx_with_flags(&uvx_flags, &args.package_args)
-            .await
-    } else {
-        if args.verbose {
-            eprintln!("Docker not available, falling back to system uvx");
-        }
-        runner.run_fallback_uvx_with_flags(&uvx_flags, &args.package_args)
-    };
+    if !runner.check_docker_available()? {
+        eprintln!("Docker is not available or not running");
+        eprintln!("suvx requires Docker to be installed and running");
+        std::process::exit(1);
+    }
+
+    let result = runner
+        .run_containerized_uvx_with_flags(&uvx_flags, &args.package_args)
+        .await;
 
     match result {
         Ok(status) => {
@@ -253,4 +260,4 @@ async fn main() -> Result<()> {
             std::process::exit(1);
         }
     }
-} 
+}

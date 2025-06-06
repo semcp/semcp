@@ -76,7 +76,9 @@ impl SnpxRunner {
         npx_flags: &[String],
         npx_args: &[String],
     ) -> Result<std::process::ExitStatus> {
-        self.executor.run_containerized(self, npx_flags, npx_args).await
+        self.executor
+            .run_containerized(self, npx_flags, npx_args)
+            .await
     }
 }
 
@@ -93,7 +95,7 @@ impl Runner for SnpxRunner {
         vec!["-y".to_string()]
     }
 
-    fn detect_transport(&self, package: &str) -> Transport {
+    fn detect_transport(&self, _package: &str) -> Transport {
         // TODO: support other transports
         Transport::Stdio
     }

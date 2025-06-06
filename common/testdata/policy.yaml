@@ -12,4 +12,4 @@ permissions:
         privileged: false
         no_new_privileges: true
         capabilities:
-          drop: [ALL]
+          drop: [ALL] 

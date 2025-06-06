@@ -20,7 +20,7 @@ impl ImageVariants {
     pub const NODE_SLIM: &'static str = "node:24-slim";
     pub const NODE_STANDARD: &'static str = "node:24";
     pub const NODE_DISTROLESS: &'static str = "gcr.io/distroless/nodejs24-debian12";
-    
+
     pub const PYTHON_ALPINE: &'static str = "ghcr.io/astral-sh/uv:python3.12-alpine";
     pub const PYTHON_SLIM: &'static str = "ghcr.io/astral-sh/uv:python3.12-bookworm-slim";
     pub const PYTHON_STANDARD: &'static str = "ghcr.io/astral-sh/uv:python3.12-bookworm";
@@ -28,7 +28,7 @@ impl ImageVariants {
     pub fn get_node_recommended() -> &'static str {
         Self::NODE_ALPINE
     }
-    
+
     pub fn get_python_recommended() -> &'static str {
         Self::PYTHON_ALPINE
     }
@@ -174,4 +174,4 @@ impl ContainerExecutor {
     pub fn image(&self) -> &str {
         &self.docker_image
     }
-} 
+}
