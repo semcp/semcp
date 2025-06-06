@@ -1,0 +1,16 @@
+[package]
+name = "snpx"
+version = "0.1.0"
+edition = "2021"
+description = "Run npx commands in docker containers for MCP"
+license = "MIT"
+
+[[bin]]
+name = "snpx"
+path = "src/main.rs"
+
+[dependencies]
+common = { path = "../common" }
+clap = { workspace = true }
+tokio = { workspace = true }
+anyhow = { workspace = true } 

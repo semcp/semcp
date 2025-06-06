@@ -1,16 +1,8 @@
-[package]
-name = "snpx"
-version = "0.1.0"
-edition = "2021"
-description = "Run npx commands in containerized environments for Model Context Protocol (MCP)"
-authors = ["snpx contributors"]
-license = "MIT"
+[workspace]
+members = ["snpx", "suvx", "common"]
+resolver = "2"
 
-[[bin]]
-name = "snpx"
-path = "src/main.rs"
-
-[dependencies]
+[workspace.dependencies]
 clap = { version = "4.4", features = ["derive"] }
 tokio = { version = "1.0", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }
