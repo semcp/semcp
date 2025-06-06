@@ -1,0 +1,16 @@
+[package]
+name = "suvx"
+version = "0.1.0"
+edition = "2021"
+description = "Run uvx commands in docker containers for MCP"
+license = "MIT"
+
+[[bin]]
+name = "suvx"
+path = "src/main.rs"
+
+[dependencies]
+common = { path = "../common" }
+clap = { workspace = true }
+tokio = { workspace = true }
+anyhow = { workspace = true } 

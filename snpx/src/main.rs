@@ -1,6 +1,6 @@
 use anyhow::Result;
 use clap::Parser;
-use snpx::{ImageVariants, PolicyConfig, SnpxRunner};
+use common::{ContainerExecutor, ImageVariants, PolicyConfig, Runner, Transport};
 use std::env;
 
 #[derive(Parser)]
@@ -56,19 +56,68 @@ struct Args {
     package_args: Vec<String>,
 }
 
+struct SnpxRunner {
+    executor: ContainerExecutor,
+}
+
+impl SnpxRunner {
+    pub fn with_policy(docker_image: String, verbose: bool, policy_config: PolicyConfig) -> Self {
+        Self {
+            executor: ContainerExecutor::with_policy(docker_image, verbose, policy_config),
+        }
+    }
+
+    pub fn check_docker_available(&self) -> Result<bool> {
+        self.executor.check_docker_available()
+    }
+
+    pub async fn run_containerized_npx_with_flags(
+        &self,
+        npx_flags: &[String],
+        npx_args: &[String],
+    ) -> Result<std::process::ExitStatus> {
+        self.executor
+            .run_containerized(self, npx_flags, npx_args)
+            .await
+    }
+}
+
+impl Runner for SnpxRunner {
+    fn command(&self) -> &str {
+        "npx"
+    }
+
+    fn default_image(&self) -> &str {
+        ImageVariants::get_node_recommended()
+    }
+
+    fn default_flags(&self) -> Vec<String> {
+        vec!["-y".to_string()]
+    }
+
+    fn detect_transport(&self, _package: &str) -> Transport {
+        // TODO: support other transports
+        Transport::Stdio
+    }
+
+    fn requires_tty(&self, transport: &Transport) -> bool {
+        matches!(transport, Transport::Http | Transport::SSE)
+    }
+}
+
 fn determine_image(args: &Args) -> String {
     if let Some(ref custom_image) = args.image {
         custom_image.clone()
     } else if args.alpine {
-        ImageVariants::ALPINE.to_string()
+        ImageVariants::NODE_ALPINE.to_string()
     } else if args.slim {
-        ImageVariants::SLIM.to_string()
+        ImageVariants::NODE_SLIM.to_string()
     } else if args.standard {
-        ImageVariants::STANDARD.to_string()
+        ImageVariants::NODE_STANDARD.to_string()
     } else if args.distroless {
-        ImageVariants::DISTROLESS.to_string()
+        ImageVariants::NODE_DISTROLESS.to_string()
     } else {
-        ImageVariants::get_recommended().to_string()
+        ImageVariants::get_node_recommended().to_string()
     }
 }
 

@@ -2,10 +2,12 @@ SHELL := bash
 
 define HELP
 Available targets:
-  build        - Build in debug mode
-  release      - Build in release mode
-  install      - Install to ~/.local/bin
+  build        - Build all workspace members in debug mode
+  release      - Build all workspace members in release mode
+  install      - Install all binaries to ~/.local/bin
                    or to /usr/local/bin (with sudo)
+  install-snpx - Install only snpx binary
+  install-suvx - Install only suvx binary
   clean        - Clean build artifacts
   test         - Run tests
   fmt          - Format code
@@ -15,25 +17,49 @@ Available targets:
 endef
 export HELP
 
-RELEASE-FILE := target/release/snpx
-
+RELEASE_DIR := target/release
 
 default: build
 
 build:
 	cargo build
 
-release: $(RELEASE-FILE)
+release: $(RELEASE_DIR)/snpx $(RELEASE_DIR)/suvx
 
-$(RELEASE-FILE):
-	cargo build --release
+$(RELEASE_DIR)/snpx:
+	cargo build --release -p snpx
 
-install: $(RELEASE-FILE)
+$(RELEASE_DIR)/suvx:
+	cargo build --release -p suvx
+
+install: $(RELEASE_DIR)/snpx $(RELEASE_DIR)/suvx
 ifeq (0,$(shell id -u))
-	sudo cp $< /usr/local/bin/snpx
+	sudo cp $(RELEASE_DIR)/snpx /usr/local/bin/snpx
+	sudo cp $(RELEASE_DIR)/suvx /usr/local/bin/suvx
 else
 	mkdir -p ~/.local/bin
-	cp $< ~/.local/bin/snpx
+	cp $(RELEASE_DIR)/snpx ~/.local/bin/snpx
+	cp $(RELEASE_DIR)/suvx ~/.local/bin/suvx
+	@[[ :$$PATH: == *:$$HOME/.local/bin:* ]] || \
+	  echo 'Make sure ~/.local/bin is in your PATH'
+endif
+
+install-snpx: $(RELEASE_DIR)/snpx
+ifeq (0,$(shell id -u))
+	sudo cp $(RELEASE_DIR)/snpx /usr/local/bin/snpx
+else
+	mkdir -p ~/.local/bin
+	cp $(RELEASE_DIR)/snpx ~/.local/bin/snpx
+	@[[ :$$PATH: == *:$$HOME/.local/bin:* ]] || \
+	  echo 'Make sure ~/.local/bin is in your PATH'
+endif
+
+install-suvx: $(RELEASE_DIR)/suvx
+ifeq (0,$(shell id -u))
+	sudo cp $(RELEASE_DIR)/suvx /usr/local/bin/suvx
+else
+	mkdir -p ~/.local/bin
+	cp $(RELEASE_DIR)/suvx ~/.local/bin/suvx
 	@[[ :$$PATH: == *:$$HOME/.local/bin:* ]] || \
 	  echo 'Make sure ~/.local/bin is in your PATH'
 endif

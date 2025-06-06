@@ -1,0 +1,15 @@
+version: '1.0'
+description: A policy for Git MCP server
+
+permissions:
+  storage:
+    allow:
+      - uri: fs:///Users/mossaka
+        access: [read]
+
+  runtime:
+    docker:
+      security:
+        privileged: false
+        capabilities:
+          drop: [ALL] 
